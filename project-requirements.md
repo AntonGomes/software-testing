@@ -27,16 +27,23 @@ Here both `#title` and `h1` are valid selectors. Note also that we only care abo
 1.9 The correct prompt must be used according to the endpoint being called and the given `product-type`.
 
 1.10 The raw HTML should be cleaned according to the product information being extracted. The class `CleanHTML` is responsible for the following requirements:
-    - 1.10.1 Scripts and irrelevant tags should always be removed.
-    - 1.10.2 Truncation of HTML if content surpasses LLM context window.
-    - 1.10.3 Correct identification of HTML elements containing product prices for the `find-price-container` endpoint.
-    - 1.10.4 Identification and cleaning of `<head>` elements for the `find-retailer-name` endpoint.
+
+    1.10.1 Scripts and irrelevant tags should always be removed.
+
+    1.10.2 Truncation of HTML if content surpasses LLM context window.
+
+    1.10.3 Correct identification of HTML elements containing product prices for the `find-price-container` endpoint.
+
+    1.10.4 Identification and cleaning of `<head>` elements for the `find-retailer-name` endpoint.
 
 ## 2. Performance Attributes
 
 2.1 The API must process and return responses within a reasonable time, ideally under 2 seconds for short to moderate HTML inputs. This timing includes:
+
     - HTML cleaning (via CleanHTML).
+
     - Constructing and sending a request to the OpenAI API.
+
     - Parsing the OpenAI API response into a suitable data model.
 
 2.2 The API should be tested under moderate levels of concurrency (e.g., multiple simultaneous requests) without significant performance degradation.
@@ -54,8 +61,9 @@ Here both `#title` and `h1` are valid selectors. Note also that we only care abo
 ## 4. Robustness Requirements
 
 4.1 The API must handle failures gracefully, including:
-    - 4.1.1 LLM unavailability, timeouts, or errors (e.g., return a clear error message or a fallback strategy).
-    - 4.1.2 Invalid, incomplete, or excessively large HTML input (e.g., apply additional truncation or reject requests).
+    4.1.1 LLM unavailability, timeouts, or errors (e.g., return a clear error message or a fallback strategy).
+
+    4.1.2 Invalid, incomplete, or excessively large HTML input (e.g., apply additional truncation or reject requests).
 
 4.2 If the LLM fails to identify a CSS selector, the API should return a clear and actionable error response or log an appropriate warning.
 
