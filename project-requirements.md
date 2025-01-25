@@ -8,7 +8,7 @@
 </div>
 ```
 
-Here both `#title` and `h1` are valid selectors. Note also that we only care about the selector in the context of the element identified by the container selector.
+Here both `#title` and `h1` are valid selectors. Note also that we only care about the selector in the context of the element identified by the container selector. An accuracy rate of 95% is acceptable for this requirement to be met. 
 
 **FR 2.** The site-settings payload parameter must fit the `site_settings_model` Pydantic data model. A type-checking error here should result in an error response.
 
@@ -34,7 +34,7 @@ Here both `#title` and `h1` are valid selectors. Note also that we only care abo
 
 ## 2. Performance Requirement
 
-**PR 1.** The API must process and return responses within a reasonable time, ideally under 2 seconds for short to moderate HTML inputs. This timing includes:
+**PR 1.** The API must process and return responses within a reasonable time, ideally under 10 seconds. This timing includes:
 - HTML cleaning (via CleanHTML).
 - Constructing and sending a request to the OpenAI API.
 - Parsing the OpenAI API response into a suitable data model.
@@ -57,4 +57,4 @@ Here both `#title` and `h1` are valid selectors. Note also that we only care abo
 
 **RR 2.** If the LLM fails to identify a CSS selector, the API should return a clear and actionable error response or log an appropriate warning.
 
-**RR 3.** The API should preserve partial site-settings updates if some selectors are successfully identified but others fail.
+**RR 3.**  If the LLM fails to identify a CSS selector, the site-setting should not be updated. 

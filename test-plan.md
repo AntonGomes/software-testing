@@ -2,8 +2,9 @@
 
 - Verify that all functional requirements are met.
 - Assess the API’s ability to handle typical and peak loads, ensuring response times remain within acceptable limits.
-- Confirm that input validation prevents malicious or malformed HTML from compromising the system or external services, and that the API handles failures gracefully.
+- Ensure complete input validation. This includes cleaning malformed HTML.
 - Ensure the test set can adapt whenever new functionality (e.g. new HTML cleaning requirements) is introduced.
+- Ensure errors are handled gracefully.
 
 ## Scope
 
@@ -13,7 +14,6 @@
 - Error handling and performance under reasonable loads.
 **Out-of-Scope**:  
 - Front-end tests (the report and plan focus on back-end/API only).  
-- Any external data sources not used in this project).
 
 ## Environment
 
@@ -30,53 +30,56 @@
 
 ## Test Data
 
-Sufficient test data must be gathered to ensure rigorous testing. The test data will include a range of HTML files with the following features:
-- `script` tags.  
-- Is abnormally long i.e. would breach the context window of the LLM.  
-- Product(s) with price.  
-- `head` tags which contain the retialer name of the site owner.  
-- Represents a `"main"` product page.  
-- Represents a `"tile"` product page.
+Test data refers to the HTML files used in testing the HTML parser and to assess the accuracy of the LLM in retrieving CSS selectors. These two scenarios have different base and edge cases outlined below:
 
-For each HTML file, the smallest `container` for the product(s) should be identified, as well as the smallest container for the product `image`, `description`, and `price`.
+**HTML Parsing Data**
+- `BASE_TILE_HTML`: A standard product tile page taken from asos.com. `<head>` tags contain the retailer name. Contains "malicious" scripts, Contains exactly 20 price elements. 
+- `BASE_MAIN_HTML`: A standard main product page taken from asos.com. `<head>` tags contain the retailer name. Contains "malicious" scripts. Contains exactly 20 price elements. 
+- `NO_HEAD_HTML`: Does not contain `<head>` tags. 
+- `EMPTY_HEAD_HTML`: `<head>` element is empty.
+- `NO_PRICE_HTML`: Contains no price elements.
+- `LONG_HTML`: A html file which is larger than the context window of the LLM. 
+
+**CSS Selector Identification Data**
+There should be 10 distinct data points of the form:
+- `llm_test_data/input/X_TILE_HTML`: A standard tile product page from an e-commerce site. 
+- `llm_test_data/input/X_MAIN_HTML`: A standard main product page from an e-commerce site `X`. 
+- `llm_test_data/output/X_SITE_SETTINGS`: The complete site settings for site `X` with the CSS selectors matching the largest possible container in each case. 
 
 ## Strategy
 
 #### Unit Tests
-- Verify parsing logic returns valid CSS selectors for each product attribute (FR 1).
-- Validate schema errors for invalid site-settings (FR 2).
-- Confirm partial updates do not overwrite existing selectors (FR 3).
-- Confirm path parameters accept only valid values and instantiate correct classes/prompts (FR 4–7, FR 9).
-- Ensure CleanHTML handles scripts, large HTML, price elements, and head tags properly (FR 10.1–10.4).
-- Simulate LLM failures/timeouts and large or malformed HTML to check graceful error handling (RR 1.1, RR 1.2).
-- Verify partial site-settings updates if some extraction steps fail (RR 3).
+- Verify full input validation and check errors are handled gracefully (FR 2, FR 4, FR 6). 
+- Verify site-settings are correctly updated when a CSS selector is identified (use mock LLM API) (FR 3). 
+- Verify the correct LLM is instantiated according to `gpt-model`(FR 5).
+- Verify correct classes are instantiated according to `product-type`(FR 7).
+- Verify correct prompts are used according to endpoint and `product-type` (FR 9).
+- Ensure CleanHTML handles scripts, large HTML, price elements, and head tags properly (FR 10.1–10.4, SR 1).
+- Simulate LLM failures/timeouts to check graceful error handling using a mock (RR 1.1).
+- Check for graceful error handling if the LLM is passes invalid HTML (RR 1.2).
+- Check excessively large HTML files are properly truncated (RR 1.2). 
+- Verify graceful error handling if the LLM is unable to detect a CSS selector (RR 2). 
+- Verify site-settings remain unchanged if a CSS-selector fails to be identified.
 
 #### Integration Tests
 
 - Combine CleanHTML output with LLM prompts to confirm correct data flow (FR 1, FR 9).
 - Check that updated site-settings data persists across multiple endpoints (FR 2, FR 3).
-- Validate concurrency on a small scale, ensuring correct handling of simultaneous requests (PR 2).
 
 #### System Tests
 
-- End-to-end scenarios where HTML is submitted, the LLM is invoked, and site-settings are updated (FR 1–10).
-- Check overall performance for short-to-moderate HTML (PR 1).
-- Confirm security constraints: input validation for malicious HTML, environment variable usage for OpenAI API keys, and no secret data leakage (SR 1, SR 2).
-
+- Measure accuracy rate of the full system when tested on each example html file. Present accuracy results by product type and product information type. (e.g. Main-images: 95%, Tile-price: 85%)
+	A CSS-selector is considered accurate if the container it identifies is equal to or contained within the container identified by the given site-settings "solution".
 #### Performance and Stress Tests
 
-- **Load Testing (PR 1, PR 2)**
-	- Measure average/peak response times under normal and concurrent load.
-	- Identify bottlenecks in `CleanHTML` or LLM calls.
-- **Stress Testing (RR 1.2)**
-	- Push beyond typical concurrency or HTML size to observe system failure modes and error responses.
+- Test API response time for each endpoint and each product type. Use mock LLM API, adding the given standard response time of the actual LLM API to auto-site-setting's response time (PR 1). 
+- Verify API response time remains within 10 seconds under concurrency levels 5, 10, 15. Use mock LLM API (PR 2). 
+- Confirm rate limiting is in place (SR 3).
 
 ## Risk Analysis
 
 - If the OpenAI API changes, breaks, or experiences downtime, tests may fail or become irrelevant.  
 	  *Mitigation*: Use mock services to replicate responses and reduce dependency on real endpoints.
-- Highly variable or large HTML inputs might exceed time or token limits.  
-	  *Mitigation*: Include edge-case HTML samples.
 - If new attack vectors emerge (e.g., advanced script injections), current sanitisation might be insufficient.  
 	  *Mitigation*: Periodic security reviews and updated sanitisation checks within the test suite.
 
@@ -102,3 +105,12 @@ Suppose you have a new requirement: when calling the `find-retailer-name` endpoi
 	- If the code can be made more efficient or readable, refactor it.
 	- Re-run the test suite to confirm that all functionality, including the new `<title>` extraction, still works.
 
+## Success Criteria
+
+- All known edge cases (e.g., missing `<head>` tags, empty `<head>`, large HTML files, and HTML with no price elements) are successfully handled to ensure parser robustness.
+- Complete path parameter validation for API endpoints, ensuring invalid or malformed parameters are handled gracefully.
+- Type and data validation for `site-settings` objects, ensuring data integrity.
+- Achieve 100% code coverage across all unit, integration, and system tests to ensure all critical paths are tested.
+- The API must meet an average response time of 10 seconds or less under typical loads, including simulated OpenAI API calls.
+- Achieve 95% accuracy in identifying CSS selectors, ensuring that the largest relevant containers are consistently selected.
+- Graceful handling of all simulated errors, including OpenAI API failures, timeouts, and invalid HTML inputs, without system crashes.
